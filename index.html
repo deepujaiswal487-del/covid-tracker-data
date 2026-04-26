@@ -4,643 +4,125 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>COVID-19 Death Predictor</title>
+
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background:#0a0e1a;
+  color:#e2e8f0;
+  font-family:'DM Sans', sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
 
-  :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1a2236;
-    --border: rgba(255,255,255,0.07);
-    --border-hover: rgba(99,179,237,0.4);
-    --accent: #63b3ed;
-    --accent2: #68d391;
-    --danger: #fc8181;
-    --text: #e2e8f0;
-    --muted: #718096;
-    --mono: 'DM Mono', monospace;
-    --sans: 'DM Sans', sans-serif;
-  }
+.card {
+  background:#111827;
+  padding:30px;
+  border-radius:10px;
+  width:350px;
+}
 
-  html { scroll-behavior: smooth; }
+input {
+  width:100%;
+  padding:10px;
+  margin:8px 0;
+  background:#0a0e1a;
+  border:1px solid #333;
+  color:white;
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+button {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  background:#63b3ed;
+  border:none;
+  cursor:pointer;
+}
 
-  /* Grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
+.result {
+  margin-top:20px;
+  font-size:20px;
+  color:#68d391;
+}
 
-  /* Glow orbs */
-  .orb {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.12;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .orb-1 { width: 500px; height: 500px; background: #3b82f6; top: -100px; left: -100px; }
-  .orb-2 { width: 400px; height: 400px; background: #10b981; bottom: 100px; right: -100px; }
-
-  .container {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 0 24px;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Header */
-  header {
-    padding: 48px 0 32px;
-    text-align: center;
-    animation: fadeUp 0.6s ease both;
-  }
-
-  .tag {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(99,179,237,0.3);
-    padding: 4px 12px;
-    border-radius: 2px;
-    margin-bottom: 20px;
-  }
-
-  h1 {
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    font-weight: 300;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin-bottom: 12px;
-  }
-
-  h1 span { color: var(--accent); font-weight: 600; }
-
-  .subtitle {
-    font-size: 15px;
-    color: var(--muted);
-    font-weight: 300;
-    max-width: 520px;
-    margin: 0 auto 12px;
-    line-height: 1.6;
-  }
-
-  .hf-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    text-decoration: none;
-    border: 1px solid var(--border);
-    padding: 6px 14px;
-    border-radius: 2px;
-    transition: all 0.2s;
-    margin-top: 16px;
-  }
-  .hf-link:hover { color: var(--accent); border-color: rgba(99,179,237,0.3); }
-  .hf-link svg { width: 14px; height: 14px; }
-
-  /* Stats bar */
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin: 32px 0;
-    overflow: hidden;
-    animation: fadeUp 0.6s 0.1s ease both;
-  }
-
-  .stat {
-    background: var(--surface);
-    padding: 20px 24px;
-    text-align: center;
-  }
-
-  .stat-val {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--accent);
-    display: block;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-top: 4px;
-    display: block;
-  }
-
-  /* Main card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 32px;
-    animation: fadeUp 0.6s 0.2s ease both;
-  }
-
-  .card-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* Form grid */
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  @media (max-width: 600px) {
-    .form-grid { grid-template-columns: 1fr; }
-  }
-
-  .field label {
-    display: block;
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
-  .field input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-    -moz-appearance: textfield;
-  }
-
-  .field input::-webkit-outer-spin-button,
-  .field input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-  .field input:focus { border-color: var(--border-hover); }
-  .field input::placeholder { color: #2d3748; }
-
-  /* Model selector */
-  .model-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 24px;
-  }
-
-  .model-btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-    letter-spacing: 0.04em;
-  }
-
-  .model-btn:hover { border-color: var(--border-hover); color: var(--text); }
-
-  .model-btn.active {
-    background: rgba(99,179,237,0.08);
-    border-color: rgba(99,179,237,0.5);
-    color: var(--accent);
-  }
-
-  /* Predict button */
-  .predict-btn {
-    width: 100%;
-    background: var(--accent);
-    color: #0a0e1a;
-    border: none;
-    border-radius: 4px;
-    padding: 14px;
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .predict-btn:hover { background: #90cdf4; transform: translateY(-1px); }
-  .predict-btn:active { transform: translateY(0); }
-  .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  .spinner {
-    display: none;
-    width: 14px; height: 14px;
-    border: 2px solid rgba(10,14,26,0.3);
-    border-top-color: #0a0e1a;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin: 0 auto;
-  }
-
-  .predict-btn.loading .btn-text { display: none; }
-  .predict-btn.loading .spinner { display: block; }
-
-  /* Result */
-  .result-card {
-    margin-top: 20px;
-    background: var(--surface2);
-    border: 1px solid rgba(104,211,145,0.2);
-    border-radius: 6px;
-    padding: 24px 28px;
-    display: none;
-    animation: fadeUp 0.3s ease both;
-  }
-
-  .result-card.visible { display: block; }
-  .result-card.error { border-color: rgba(252,129,129,0.3); }
-
-  .result-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
-  .result-number {
-    font-family: var(--mono);
-    font-size: 3rem;
-    font-weight: 500;
-    color: var(--accent2);
-    line-height: 1;
-    margin-bottom: 16px;
-  }
-
-  .result-number.error-text { color: var(--danger); font-size: 1.2rem; }
-
-  .result-meta {
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-
-  .meta-item { font-size: 13px; color: var(--muted); }
-  .meta-item span { color: var(--text); font-weight: 500; }
-
-  /* Metrics section */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 24px;
-    animation: fadeUp 0.6s 0.3s ease both;
-  }
-
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 20px 24px;
-  }
-
-  .metric-card-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .metric-card-title.lr { color: var(--accent); }
-  .metric-card-title.dt { color: var(--accent2); }
-
-  .metric-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    font-size: 13px;
-  }
-
-  .metric-row .key { color: var(--muted); font-family: var(--mono); font-size: 12px; }
-  .metric-row .val { color: var(--text); font-family: var(--mono); font-weight: 500; }
-
-  /* How it works */
-  .how-section {
-    margin-top: 24px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 28px 32px;
-    animation: fadeUp 0.6s 0.4s ease both;
-  }
-
-  .steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-top: 20px;
-  }
-
-  @media (max-width: 600px) { .steps { grid-template-columns: 1fr; } }
-
-  .step { }
-  .step-num {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    margin-bottom: 8px;
-  }
-  .step-title { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
-  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-  /* Footer */
-  footer {
-    text-align: center;
-    padding: 40px 0 32px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.06em;
-    animation: fadeUp 0.6s 0.5s ease both;
-  }
-
-  footer a { color: var(--accent); text-decoration: none; }
-
-  /* Error bar */
-  .error-bar {
-    background: rgba(252,129,129,0.08);
-    border: 1px solid rgba(252,129,129,0.2);
-    border-radius: 4px;
-    padding: 10px 16px;
-    font-size: 13px;
-    color: var(--danger);
-    margin-top: 12px;
-    display: none;
-    font-family: var(--mono);
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+.error {
+  color:#fc8181;
+  margin-top:10px;
+}
 </style>
 </head>
+
 <body>
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
 
-<div class="container">
+<div class="card">
+  <h2>COVID Death Predictor</h2>
 
-  <header>
-    <div class="tag">ML · scikit-learn · Gradio</div>
-    <h1>COVID-19 <span>Death</span> Predictor</h1>
-    <p class="subtitle">Predict deaths from Confirmed, Recovered, and Active case counts using Linear Regression and Decision Tree models.</p>
-    <a class="hf-link" href="https://huggingface.co/spaces/ml-DeepakJ/covid-data-tracker" target="_blank">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-      Live on Hugging Face Space
-    </a>
-  </header>
+  <input type="number" id="confirmed" placeholder="Confirmed Cases">
+  <input type="number" id="recovered" placeholder="Recovered Cases">
+  <input type="number" id="active" placeholder="Active Cases">
 
-  <div class="stats-bar">
-    <div class="stat">
-      <span class="stat-val">2</span>
-      <span class="stat-label">ML Models</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val">3</span>
-      <span class="stat-label">Input Features</span>
-    </div>
-    <div class="stat">
-      <span class="stat-val">20%</span>
-      <span class="stat-label">Test Split</span>
-    </div>
-  </div>
+  <button onclick="predict()">Predict</button>
 
-  <div class="card">
-    <div class="card-title">Predict Deaths</div>
-
-    <div class="form-grid">
-      <div class="field">
-        <label>Confirmed Cases</label>
-        <input type="number" id="confirmed" placeholder="e.g. 50000" min="0">
-      </div>
-      <div class="field">
-        <label>Recovered Cases</label>
-        <input type="number" id="recovered" placeholder="e.g. 35000" min="0">
-      </div>
-      <div class="field">
-        <label>Active Cases</label>
-        <input type="number" id="active" placeholder="e.g. 13000" min="0">
-      </div>
-    </div>
-
-    <div style="margin-bottom:8px; font-family: var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--muted);">Select Model</div>
-    <div class="model-row">
-      <button class="model-btn active" onclick="selectModel('Decision Tree', this)">Decision Tree</button>
-      <button class="model-btn" onclick="selectModel('Linear Regression', this)">Linear Regression</button>
-    </div>
-
-    <button class="predict-btn" id="predictBtn" onclick="predict()">
-      <span class="btn-text">Run Prediction</span>
-      <div class="spinner"></div>
-    </button>
-
-    <div class="error-bar" id="errorBar"></div>
-
-    <div class="result-card" id="resultCard">
-      <div class="result-label">Predicted Deaths</div>
-      <div class="result-number" id="resultNumber">—</div>
-      <div class="result-meta" id="resultMeta"></div>
-    </div>
-  </div>
-
-  <div class="metrics-grid">
-    <div class="metric-card">
-      <div class="metric-card-title lr">Linear Regression</div>
-      <div class="metric-row"><span class="key">Algorithm</span><span class="val">OLS</span></div>
-      <div class="metric-row"><span class="key">Features</span><span class="val">3</span></div>
-      <div class="metric-row"><span class="key">Train/Test</span><span class="val">80 / 20%</span></div>
-      <div class="metric-row"><span class="key">random_state</span><span class="val">42</span></div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-card-title dt">Decision Tree</div>
-      <div class="metric-row"><span class="key">Algorithm</span><span class="val">CART</span></div>
-      <div class="metric-row"><span class="key">Features</span><span class="val">3</span></div>
-      <div class="metric-row"><span class="key">Train/Test</span><span class="val">80 / 20%</span></div>
-      <div class="metric-row"><span class="key">random_state</span><span class="val">42</span></div>
-    </div>
-  </div>
-
-  <div class="how-section">
-    <div class="card-title">How It Works</div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01 — DATA</div>
-        <div class="step-title">Load & Clean</div>
-        <div class="step-desc">CSV loaded with pandas, null values filled with 0. Features: Confirmed, Recovered, Active.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">02 — TRAIN</div>
-        <div class="step-title">Fit Models</div>
-        <div class="step-desc">80/20 train-test split with scikit-learn. Both Linear Regression and Decision Tree trained.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">03 — PREDICT</div>
-        <div class="step-title">Run Inference</div>
-        <div class="step-desc">Your inputs are sent to the Hugging Face Space API and predicted deaths are returned instantly.</div>
-      </div>
-    </div>
-  </div>
-
-  <footer>
-    Built by <a href="https://huggingface.co/ml-DeepakJ" target="_blank">ml-DeepakJ</a> &nbsp;·&nbsp;
-    <a href="https://huggingface.co/spaces/ml-DeepakJ/covid-data-tracker" target="_blank">Hugging Face Space</a> &nbsp;·&nbsp;
-    scikit-learn + Gradio
-  </footer>
-
+  <div class="result" id="result"></div>
+  <div class="error" id="error"></div>
 </div>
 
 <script>
-  let selectedModel = 'Decision Tree';
+async function predict() {
+  const confirmed = document.getElementById('confirmed').value;
+  const recovered = document.getElementById('recovered').value;
+  const active = document.getElementById('active').value;
 
-  function selectModel(name, btn) {
-    selectedModel = name;
-    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+  const resultDiv = document.getElementById('result');
+  const errorDiv = document.getElementById('error');
+
+  resultDiv.innerHTML = "";
+  errorDiv.innerHTML = "";
+
+  if (!confirmed || !recovered || !active) {
+    errorDiv.innerHTML = "Please fill all fields";
+    return;
   }
 
-  async function predict() {
-    const confirmed = parseFloat(document.getElementById('confirmed').value);
-    const recovered = parseFloat(document.getElementById('recovered').value);
-    const active    = parseFloat(document.getElementById('active').value);
-    const btn       = document.getElementById('predictBtn');
-    const errorBar  = document.getElementById('errorBar');
-    const resultCard = document.getElementById('resultCard');
+  try {
+    errorDiv.innerHTML = "⏳ Waking server... please wait";
 
-    errorBar.style.display = 'none';
-    resultCard.classList.remove('visible', 'error');
-
-    if (isNaN(confirmed) || isNaN(recovered) || isNaN(active)) {
-      errorBar.textContent = 'Please fill in all three fields.';
-      errorBar.style.display = 'block';
-      return;
-    }
-
-    btn.classList.add('loading');
-    btn.disabled = true;
-
-    try {
-      // Call Hugging Face Space API (Gradio)
-      const HF_SPACE = 'https://ml-deepakj-covid-data-tracker.hf.space';
-
-      const sessionRes = await fetch(`${HF_SPACE}/gradio_api/queue/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(
+      "https://ml-deepakj-covid-data-tracker.hf.space/run/predict",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
-          data: [confirmed, recovered, active],
-          fn_index: 0,
-          session_hash: Math.random().toString(36).slice(2)
+          data: [
+            Number(confirmed),
+            Number(recovered),
+            Number(active)
+          ]
         })
-      });
-
-      if (!sessionRes.ok) throw new Error('Could not reach the Hugging Face Space. Make sure it is running.');
-
-      const { event_id, session_hash } = await sessionRes.json();
-
-      // Poll for result
-      const result = await pollResult(HF_SPACE, event_id, session_hash);
-      const deaths = Math.max(0, Math.round(result));
-
-      document.getElementById('resultNumber').textContent = deaths.toLocaleString();
-      document.getElementById('resultMeta').innerHTML = `
-        <div class="meta-item">Model: <span>${selectedModel}</span></div>
-        <div class="meta-item">Confirmed: <span>${confirmed.toLocaleString()}</span></div>
-        <div class="meta-item">Recovered: <span>${recovered.toLocaleString()}</span></div>
-        <div class="meta-item">Active: <span>${active.toLocaleString()}</span></div>
-      `;
-      resultCard.classList.add('visible');
-
-    } catch (err) {
-      errorBar.textContent = `Error: ${err.message}`;
-      errorBar.style.display = 'block';
-      console.error(err);
-    } finally {
-      btn.classList.remove('loading');
-      btn.disabled = false;
-    }
-  }
-
-  async function pollResult(base, event_id, session_hash) {
-    const maxAttempts = 30;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise(r => setTimeout(r, 800));
-      const res = await fetch(`${base}/gradio_api/queue/status?session_hash=${session_hash}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.status === 'COMPLETE' && data.data) {
-        return data.data[0];
       }
-      if (data.status === 'FAILED') throw new Error('Prediction failed on the server.');
+    );
+
+    if (!response.ok) {
+      throw new Error("Server not responding");
     }
-    throw new Error('Timed out waiting for prediction. The Space may be sleeping — try again in 30 seconds.');
+
+    const data = await response.json();
+    const prediction = Math.round(data.data[0]);
+
+    errorDiv.innerHTML = "";
+    resultDiv.innerHTML = "Predicted Deaths: " + prediction;
+
+  } catch (err) {
+    errorDiv.innerHTML = "⚠️ Hugging Face Space is sleeping. Try again in 20 seconds.";
   }
+}
 </script>
+
 </body>
 </html>
